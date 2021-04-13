@@ -25,3 +25,21 @@ def leaky_ReLU(s):
 plt.plot(s,leaky_ReLU(s))
 plt.grid(True)
 plt.show()
+
+def d_stairs_function(s): #s=0 불가, 이외는 0 이다.
+    return np.where(s=0,null,0)
+
+def d_logistic_sig(s,a):
+    return a*logistic_sig(s,a)*(1-logistic_sig(s,a))
+
+def d_hyperbolic_tan(s,a):
+    return 0.5*(1-hyperbolic_tan(s,a)^2)
+
+def d_softflus(s):
+    return 1/(1+np.exp(-s))
+
+def ReLU(s):
+    return np.where(s>=0,1,0)
+
+def leaky_ReLU(s):
+    return np.where(s>=0,1,0.01)
