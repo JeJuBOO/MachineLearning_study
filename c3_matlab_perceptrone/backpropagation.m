@@ -39,15 +39,16 @@ while 1
         U2 = U2 -lr*dU2;
         U1 = U1 -lr*dU1;
     end
-    
+    error(epo) = mse(Y,o);
     %stop condition
-    if mse(Y,o) < 1e-2 & epo >= 1e+5
+    if mse(Y,o) < 1e-2 & epo >= 1e+3
         break
     end
 end
 
 fprintf("출력 벡터 : %5.4f %5.4f %5.4f %5.4f\n",o)
 fprintf("오차 : %5.4d\n세대 : %6.0f",mse(Y,o),epo)
+plot((1:epo),error)
 
 %objective function
 function error = mse(y,o)

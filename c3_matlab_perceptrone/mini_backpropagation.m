@@ -54,8 +54,10 @@ while 1
     U2 = U2 -lr*dU2/sample_n;
     U1 = U1 -lr*dU1/sample_n;
     
+    error(epo) = mse(Y_sample,o);
     %stop condition
     if mse(Y_sample,o) < 1e-2 & epo >= 1e+5
+        break
         break
     end
 end
@@ -64,9 +66,9 @@ for i=1:length(X)
     %forward
     hidden_node = [1; sigmoid(U1*X(:,i))];
     o(:,i) = sigmoid(U2*hidden_node);
-    
 end
 
+plot((1:epo),error)
 fprintf("출력 벡터 : %5.4f %5.4f %5.4f %5.4f\n",o)
 fprintf("오차 : %5.4d\n세대 : %6.0f",mse(Y,o),epo)
 %objective function
