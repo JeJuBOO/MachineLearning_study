@@ -13,7 +13,7 @@ hd_node_n = 4;
 out_node_n = length(Y(:,1));
 
 %learning rate
-lr = 0.02;
+lr = 0.8;
 
 %weight matrix
 U1 = rand(hd_node_n,in_node_n+1);
@@ -41,7 +41,7 @@ while 1
     end
     error(epo) = mse(Y,o);
     %stop condition
-    if mse(Y,o) < 1e-2 & epo >= 1e+3
+    if mse(Y,o) < 1e-4 & epo >= 1e+3
         break
     end
 end
