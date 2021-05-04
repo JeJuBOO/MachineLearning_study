@@ -11,7 +11,6 @@ x = (x-mean(x))./std(x);
 X = [ones(1,length(x)) ; x']; % bias add
 one_hot = diag(ones(1,max(y)));
 Y = one_hot(y,:)';
-
 % n=1;
 % % training set (iris dataset)
 % figure(1)
@@ -31,7 +30,7 @@ out_node_n = length(Y(:,1));
 error_epo = zeros(1,10);
 
 %learning rate
-lr = 0.5;
+lr = 0.2;
 
 %weight matrix
 U1 = rand(hd_node_n,in_node_n+1);
@@ -41,52 +40,39 @@ U3 = rand(out_node_n,hd2_node_n+1);
 o = zeros(size(Y));
 epo = 0;
 tic
-sample_n = 100;
 while 1
-    sample_index = randsample(length(X),sample_n);
-    X_sample = X(:,sample_index);
-    Y_sample = Y(:,sample_index);
-    
+    o = zeros(size(Y));
+    epo = epo+1;
     dU1 = zeros(size(U1));
     dU2 = zeros(size(U2));
     dU3 = zeros(size(U3));
-    
-    o = zeros(size(Y_sample));
-    epo = epo+1;
-    for i=1:sample_n
+    for i=1:length(x)
         %forward
-        hidden_node = [1; Forward(@Sigmoid,X_sample(:,i),U1)];
+        hidden_node = [1; Forward(@Sigmoid,X(:,i),U1)];
         hidden2_node = [1; Forward(@Sigmoid,hidden_node,U2)];
         o(:,i) = Forward(@Sigmoid,hidden2_node,U3);
         
         %error backpropagation
-        gradient1 = (Y_sample(:,i) - o(:,i)).*Forward(@d_Sigmoid,hidden2_node,U3);
-        dU3 = dU3 -gradient1*hidden2_node';
+        gradient1 = (Y(:,i) - o(:,i)).*Forward(@d_Sigmoid,hidden2_node,U3);
+        dU3 = -gradient1*hidden2_node';
         gradient2 = (gradient1'*U3(:,2:end))'.*Forward(@d_Sigmoid,hidden_node,U2);
-        dU2 = dU2 -gradient2*hidden_node';
-        gradient3 = (gradient2'*U2(:,2:end))'.*Forward(@d_Sigmoid,X_sample(:,i),U1);
-        dU1 = dU1 -gradient3*X_sample(:,i)';
+        dU2 = -gradient2*hidden_node';
+        gradient3 = (gradient2'*U2(:,2:end))'.*Forward(@d_Sigmoid,X(:,i),U1);
+        dU1 = -gradient3*X(:,i)';
+        
+        %update weight
+        U3 = U3 -lr*dU3;
+        U2 = U2 -lr*dU2;
+        U1 = U1 -lr*dU1;
     end
-    
-    %update weight
-    U3 = U3 -lr*dU3/sample_n;
-    U2 = U2 -lr*dU2/sample_n;
-    U1 = U1 -lr*dU1/sample_n;
-    
-    error_epo(epo) = Mse(Y(:,sample_index),o,sample_n);
+    error_epo(epo) = Mse(Y,o,length(x));
     fprintf("세대 : %6.0f    오차 : %5.4d\n",epo,error_epo(epo))
+    
     %stop condition
-   
-%     [~,max_o] = max(o);
-%     if max_o==y(:,sample_index)
-%         succes = succes + 1;
-%     else
-%         succes = 0;
-%     end
-%     
-    if epo == 2000
+    if  Mse(Y,o,length(x)) < 1e-3
         break
     end
+
 end
 toc
 figure(2)
@@ -104,23 +90,15 @@ for i=1:length(x)
 end
 [~,max_o] = max(o);
 error_epo = Mse(Y,o,length(x));
-fprintf("출력 벡터 : %3.0f 정답 벡터 : %3.0f \n",[max_o;y])
+fail = 0;
+for i=1:150
+    if max_o(i) ~= y(i)
+        fail = fail + 1;
+    end
+end
+fail
+% fprintf("출력 벡터 : %3.0f 정답 벡터 : %3.0f \n",[max_o;y])
 fprintf("\n오차 : %5.4d\n세대 : %6.0f\n",error_epo,epo)
-
-o_1 = find(max_o==1);
-o_2 = find(max_o==2);
-o_3 = find(max_o==3);
-% n=1;
-% figure(3)
-% for i=1:4
-%     for j=1:4
-%         subplot(4,4,n)
-%         plot(x(o_1,i),x(o_1,j),"r."); hold on
-%         plot(x(o_2,i),x(o_2,j),"g."); hold on
-%         plot(x(o_3,i),x(o_3,j),"k."); hold on
-%         n=n+1;
-%     end
-% end
 
 %% function
 %forward
