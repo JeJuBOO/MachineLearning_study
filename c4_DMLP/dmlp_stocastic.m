@@ -69,7 +69,7 @@ while 1
     fprintf("세대 : %6.0f    오차 : %5.4d\n",epo,error_epo(epo))
     
     %stop condition
-    if  Mse(Y,o,length(x)) < 1e-3
+    if  error_epo(epo) < 1e-3
         break
     end
 

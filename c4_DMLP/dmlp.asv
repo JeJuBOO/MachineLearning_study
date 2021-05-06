@@ -41,7 +41,7 @@ U3 = rand(out_node_n,hd2_node_n+1);
 o = zeros(size(Y));
 epo = 0;
 tic
-sample_n = 5;
+sample_n = 3;
 while 1
     index = 1:length(X);
     index_n = ones(size(index));
@@ -50,7 +50,7 @@ while 1
     while q
         sample_index = randsample(length(X),sample_n);
         index_n =  prod(index~=sample_index);
-        index = index.*index_n
+        index = index.*index_n;
         
         X_sample = X(:,sample_index);
         Y_sample = Y(:,sample_index);
@@ -80,18 +80,17 @@ while 1
         U3 = U3 -lr*dU3/sample_n;
         U2 = U2 -lr*dU2/sample_n;
         U1 = U1 -lr*dU1/sample_n;
-        
-        %stop condition
-        if sum(index) == 0
-            q=0;
-        end
-        
     end
     error_epo(epo) = Mse(Y(:,sample_index),o,sample_n);
     fprintf("세대 : %6.0f    오차 : %5.4d\n",epo,error_epo(epo))
-    if  error_epo(epo) < 1e-4
+    %stop condition
+    if sum(index) == 0
+        q=0;
+    end
+    if epo >= 2000 && error_epo(epo) < 1e-4
         break
     end
+    
 end
 toc
 figure(2)
