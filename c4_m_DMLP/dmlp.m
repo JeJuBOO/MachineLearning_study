@@ -29,6 +29,7 @@ hd_node_n = 4;
 hd2_node_n = 4;
 out_node_n = length(Y(:,1));
 error_epo = zeros(1,10);
+error = zeros(1,10);
 
 %learning rate
 lr = 0.2;
@@ -44,13 +45,12 @@ tic
 sample_n = 5;
 while 1
     index = 1:length(X);
-    index_n = ones(size(index));
     epo = epo+1;
     q=1;
-    while q
-        sample_index = randsample(length(X),sample_n);
-        index_n =  prod(index~=sample_index);
-        index = index.*index_n;
+    for j=1:length(X)/sample_n
+        sample_index = randsample(length(index),sample_n);
+        sample = index(sample_index);
+        index(sample_index) = [];
         
         X_sample = X(:,sample_index);
         Y_sample = Y(:,sample_index);
@@ -81,15 +81,13 @@ while 1
         U2 = U2 -lr*dU2/sample_n;
         U1 = U1 -lr*dU1/sample_n;
         
-        %stop condition
-        if sum(index) == 0
-            q=0;
-        end
-        
+        error(j) =  Mse(Y(:,sample_index),o,sample_n);
     end
-    error_epo(epo) = Mse(Y(:,sample_index),o,sample_n);
+    error_epo(epo) = sum(error)/j;
     fprintf("세대 : %6.0f    오차 : %5.4d\n",epo,error_epo(epo))
-    if  error_epo(epo) < 1e-4
+    
+    %stop condition
+    if  error_epo(epo) < 1e-3
         break
     end
 end
@@ -99,6 +97,7 @@ plot((1:epo),error_epo)
 title("오차(MSE)")
 xlabel("세대(epoch)")
 ylabel("오차(error)")
+
 
 %% test
 for i=1:length(x)
