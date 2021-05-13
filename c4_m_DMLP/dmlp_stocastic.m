@@ -4,8 +4,8 @@ clc,clear,close all
 
 % training set (iris dataset)
 load iris.dat
-x = iris(:,1:4);
-y = iris(:,5)';
+x = iris([1:40, 51:90, 101:140],1:4);
+y = iris([1:40, 51:90, 101:140],5)';
 x = (x-mean(x))./std(x);
 
 X = [ones(1,length(x)) ; x']; % bias add
@@ -25,7 +25,7 @@ Y = one_hot(y,:)';
 %number of nodes
 in_node_n = length(x(1,:));
 hd_node_n = 4;
-hd2_node_n = 4;
+hd2_node_n = 3;
 out_node_n = length(Y(:,1));
 error_epo = zeros(1,10);
 
@@ -37,9 +37,9 @@ U1 = rand(hd_node_n,in_node_n+1);
 U2 = rand(hd2_node_n,hd_node_n+1);
 U3 = rand(out_node_n,hd2_node_n+1);
 
-o = zeros(size(Y));
 epo = 0;
 tic
+succese_n = 0;
 while 1
     o = zeros(size(Y));
     epo = epo+1;
@@ -69,9 +69,11 @@ while 1
     fprintf("세대 : %6.0f    오차 : %5.4d\n",epo,error_epo(epo))
     
     %stop condition
-    if  error_epo(epo) < 1e-3
+    [~,max_o] = max(o);
+    succese_n = succese_n + prod(max_o==y);
+    if succese_n==20  || epo == 50000
         break
-    end
+    end 
 
 end
 toc
@@ -82,23 +84,48 @@ xlabel("세대(epoch)")
 ylabel("오차(error)")
 
 %% test
+x = iris([41:50, 91:100, 141:150],1:4);
+y = iris([41:50, 91:100, 141:150],5)';
+x = (x-mean(x))./std(x);
+
+X = [ones(1,length(x)) ; x']; % bias add
+one_hot = diag(ones(1,max(y)));
+Y = one_hot(y,:)';
+o = zeros(size(Y));
+
 for i=1:length(x)
     %forward
     hidden_node = [1; Forward(@Sigmoid,X(:,i),U1)];
     hidden2_node = [1; Forward(@Sigmoid,hidden_node,U2)];
     o(:,i) = Forward(@Sigmoid,hidden2_node,U3);
 end
+
 [~,max_o] = max(o);
 error_epo = Mse(Y,o,length(x));
 fail = 0;
-for i=1:150
+for i=1:length(x)
     if max_o(i) ~= y(i)
         fail = fail + 1;
     end
 end
-fail
-% fprintf("출력 벡터 : %3.0f 정답 벡터 : %3.0f \n",[max_o;y])
+
 fprintf("\n오차 : %5.4d\n세대 : %6.0f\n",error_epo,epo)
+fprintf("test 집합에서 틀린 개수 : %d",fail);
+
+o_1 = find(max_o==1);
+o_2 = find(max_o==2);
+o_3 = find(max_o==3);
+n=1;
+figure(3)
+for i=1:4
+    for j=1:4
+        subplot(4,4,n)
+        plot(x(o_1,i),x(o_1,j),"r."); hold on
+        plot(x(o_2,i),x(o_2,j),"g."); hold on
+        plot(x(o_3,i),x(o_3,j),"k."); hold on
+        n=n+1;
+    end
+end
 
 %% function
 %forward
