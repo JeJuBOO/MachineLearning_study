@@ -22,23 +22,16 @@ out_node_n = length(Y(:,1));
 
 %learning rate
 lr = 0.2;
-alpha_m = 0.9;
-alpha_lr = 0.9;
 
 %weight matrix
 U1 = randn(hd_node_n,in_node_n);
 U2 = randn(hd2_node_n,hd_node_n+1);
 U3 = randn(out_node_n,hd2_node_n+1);
-
-%momentum
-v1 = 0;v2 = 0;v3 = 0;
-r1 = 0;r2 = 0;r3 = 0;
-
-t = 1;
+   
 epo = 1000;
 tic
-sample_n = 100;
-for j=1:epo    
+sample_n = 64;
+for j=1:epo
     sample_index = randperm(length(X));
     X_sample = X(:,sample_index(1:sample_n));
     Y_sample = Y(:,sample_index(1:sample_n));
@@ -49,49 +42,32 @@ for j=1:epo
     
     for i=1:sample_n
         X_sample(:,i) = Normalization(X_sample(:,i));
-        %% forward
+
+       %% forward
         hidden_node = [1; Forward_mlp(@Relu,X_sample(:,i),U1)];
         hidden_node = Normalization(hidden_node);
         hidden2_node = [1; Forward_mlp(@Relu,hidden_node,U2)];
         hidden2_node = Normalization(hidden2_node);
         o = Forward_mlp(@exp,hidden2_node,U3)/sum(Forward_mlp(@exp,hidden2_node,U3));
-        %% Error
+       %% Error
         o_num(i) = find(o==max(o));
         y_num(i) = find(Y_sample(:,i)==1);
         error(i,:) = -sum(Y_sample(:,i).*log(o));
 
-        %% hat gradiant (Momentum)
-        hU3 = U3 + alpha_m*v3;
-        hU2 = U2 + alpha_m*v2;
-        hU1 = U1 + alpha_m*v1;
         
-        %% error backpropagation
-        gradient1 = (Y_sample(:,i)-Forward_mlp(@Relu,hidden2_node,U3));
+       %% error backpropagation
+        gradient1 = (Y_sample(:,i) - o);
         dU3 = dU3 -gradient1*hidden2_node';
-        gradient2 = (gradient1'*hU3(:,2:end))'.*Forward_mlp(@ReluGradient,hidden_node,hU2);
+        gradient2 = (gradient1'*U3(:,2:end))'.*Forward_mlp(@ReluGradient,hidden_node,U2);
         dU2 = dU2 -gradient2*hidden_node';
-        gradient3 = (gradient2'*hU2(:,2:end))'.*Forward_mlp(@ReluGradient,X_sample(:,i),hU1);
+        gradient3 = (gradient2'*U2(:,2:end))'.*Forward_mlp(@ReluGradient,X_sample(:,i),U1);
         dU1 = dU1 -gradient3*X_sample(:,i)';
     end
-    g3 = dU3/sample_n;
-    g2 = dU2/sample_n;
-    g1 = dU1/sample_n;
     
-    %% Momentum
-    v3 = alpha_m*v3 - (1-alpha_m)*g3; v3 = v3/(1-(alpha_m)^t);
-    v2 = alpha_m*v2 - (1-alpha_m)*g2; v2 = v2/(1-(alpha_m)^t);
-    v1 = alpha_m*v1 - (1-alpha_m)*g1; v1 = v1/(1-(alpha_m)^t);
-    %% RMSProp
-    r3 = alpha_lr*r3 + (1-alpha_lr)*g3.*g3; r3 = r3/(1-(alpha_lr)^t);
-    r2 = alpha_lr*r2 + (1-alpha_lr)*g2.*g2; r2 = r2/(1-(alpha_lr)^t);
-    r1 = alpha_lr*r1 + (1-alpha_lr)*g1.*g1; r1 = r1/(1-(alpha_lr)^t);
-
-    %% update weight
-    U3 = U3 - (lr./((1e-10)+sqrt(r3))).*v3;
-    U2 = U2 - (lr./((1e-10)+sqrt(r2))).*v2;
-    U1 =  - (lr./((1e-10)+sqrt(r1))).*v1;
-    
-    t = t+1;
+    %update weight
+    U3 = U3 -lr*dU3/sample_n;
+    U2 = U2 -lr*dU2/sample_n;
+    U1 = U1 -lr*dU1/sample_n;
     
     clc
     tex2 = mean(o_num == y_num);
