@@ -22,15 +22,18 @@ out_node_n = length(Y(:,1));
 
 %learning rate
 lr = 0.2;
+alpha_m = 0.9;
 
 %weight matrix
 U1 = randn(hd_node_n,in_node_n);
 U2 = randn(hd2_node_n,hd_node_n+1);
 U3 = randn(out_node_n,hd2_node_n+1);
+%momentum
+v1 = 0;v2 = 0;v3 = 0;
 
-epo = 1000;
+epo = 2000;
 tic
-sample_n = 64;
+sample_n = 100;
 for j=1:epo
     index = 1:length(X);
     o = zeros(size(Y));
@@ -44,30 +47,38 @@ for j=1:epo
     dU3 = zeros(size(U3));
     
     for i=1:sample_n
-       %% forward
+        %% forward
         hidden_node = [1; Forward_mlp(@Relu,X_sample(:,i),U1)];
         hidden_node = (hidden_node-mean(hidden_node))./std(hidden_node);
         hidden2_node = [1; Forward_mlp(@Relu,hidden_node,U2)];
         hidden2_node = (hidden2_node-mean(hidden2_node))./std(hidden2_node);
         o = Forward_mlp(@exp,hidden2_node,U3)/sum(Forward_mlp(@exp,hidden2_node,U3));
-       %% Error
+        %% Error
         o_num(i) = find(o==max(o));
         y_num(i) = find(Y_sample(:,i)==1);
         error(i,:) = -sum(Y_sample(:,i).*log(o));
         
-       %% error backpropagation
+        %% Momentum
+        hU3 = U3 + alpha_m*v3;
+        hU2 = U2 + alpha_m*v2;
+        hU1 = U1 + alpha_m*v1;
+        
+        %% error backpropagation
         gradient1 = (Y_sample(:,i) - o);
         dU3 = dU3 -gradient1*hidden2_node';
-        gradient2 = (gradient1'*U3(:,2:end))'.*Forward_mlp(@ReluGradient,hidden_node,U2);
+        gradient2 = (gradient1'*hU3(:,2:end))'.*Forward_mlp(@ReluGradient,hidden_node,hU2);
         dU2 = dU2 -gradient2*hidden_node';
-        gradient3 = (gradient2'*U2(:,2:end))'.*Forward_mlp(@ReluGradient,X_sample(:,i),U1);
+        gradient3 = (gradient2'*hU2(:,2:end))'.*Forward_mlp(@ReluGradient,X_sample(:,i),hU1);
         dU1 = dU1 -gradient3*X_sample(:,i)';
     end
+    v3 = alpha_m*v3 - lr*dU3/sample_n;
+    v2 = alpha_m*v2 - lr*dU2/sample_n;
+    v1 = alpha_m*v1 - lr*dU1/sample_n;
     
     %update weight
-    U3 = U3 -lr*dU3/sample_n;
-    U2 = U2 -lr*dU2/sample_n;
-    U1 = U1 -lr*dU1/sample_n;
+    U3 = U3 + v3;
+    U2 = U2 + v2;
+    U1 = U1 + v1;
     
     clc
     tex2 = mean(o_num == y_num);
