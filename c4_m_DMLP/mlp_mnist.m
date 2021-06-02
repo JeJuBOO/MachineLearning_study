@@ -23,7 +23,8 @@ out_node_n = length(Y(:,1));
 
 %learning rate
 lr = 0.2;
-alpha_m = 0.2; 
+alpha_m = 0; 
+alpha_lr = 0;
 ep = 2;
 
 %weight matrix
@@ -34,7 +35,9 @@ U4 = randn(out_node_n,hd3_node_n+1);
 
 %momentum
 v1 = 0;v2 = 0;v3 = 0;v4 = 0;
+r1 = 0;r2 = 0;r3 = 0;r4 = 0;
 
+t = 1;
 epo =30000;
 tic
 sample_n = 64;
@@ -78,16 +81,27 @@ for j=1:epo
         gradient4 = (gradient3'*hU2(:,2:end))'.*Forward_mlp(@ReluGradient,X_sample(:,i),hU1);
         dU1 = dU1 -gradient4*X_sample(:,i)';
     end
-    v4 = alpha_m*v4 - lr*dU4/sample_n;
-    v3 = alpha_m*v3 - lr*dU3/sample_n;
-    v2 = alpha_m*v2 - lr*dU2/sample_n;
-    v1 = alpha_m*v1 - lr*dU1/sample_n;
+    g4 = dU4/sample_n;
+    g3 = dU3/sample_n;
+    g2 = dU2/sample_n;
+    g1 = dU1/sample_n;
     
-    %update weight
-    U4 = U4 + v4 - lr*ep*sign(U4);
-    U3 = U3 + v3 - lr*ep*sign(U3);
-    U2 = U2 + v2 - lr*ep*sign(U2);
-    U1 = U1 + v1 - lr*ep*sign(U1);
+    %% Momentum
+    v4 = alpha_m*v4 - (1-alpha_m)*g4; v4 = v4/(1-(alpha_m)^t);
+    v3 = alpha_m*v3 - (1-alpha_m)*g3; v3 = v3/(1-(alpha_m)^t);
+    v2 = alpha_m*v2 - (1-alpha_m)*g2; v2 = v2/(1-(alpha_m)^t);
+    v1 = alpha_m*v1 - (1-alpha_m)*g1; v1 = v1/(1-(alpha_m)^t);
+    %% RMSProp
+    r4 = alpha_lr*r4 + (1-alpha_lr)*g4.*g4; r4 = r4/(1-(alpha_lr)^t);
+    r3 = alpha_lr*r3 + (1-alpha_lr)*g3.*g3; r3 = r3/(1-(alpha_lr)^t);
+    r2 = alpha_lr*r2 + (1-alpha_lr)*g2.*g2; r2 = r2/(1-(alpha_lr)^t);
+    r1 = alpha_lr*r1 + (1-alpha_lr)*g1.*g1; r1 = r1/(1-(alpha_lr)^t);
+    
+    %% update weight
+    U4 = U4 - (lr./((1e-10)+sqrt(r4))).*v4 - lr*ep*sign(U4);
+    U3 = U3 - (lr./((1e-10)+sqrt(r3))).*v3 - lr*ep*sign(U3);
+    U2 = U2 - (lr./((1e-10)+sqrt(r2))).*v2 - lr*ep*sign(U2);
+    U1 = U1 - (lr./((1e-10)+sqrt(r1))).*v1 - lr*ep*sign(U1);
     
     clc
     tex2 = mean(o_num == y_num);
