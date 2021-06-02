@@ -16,28 +16,28 @@ X = (X-mean(X))./std(X);
 
 %number of nodes
 in_node_n = length(X(:,1));
-hd_node_n = 20;
-hd2_node_n = 15;
+hd_node_n = 15;
+hd2_node_n = 20;
+hd3_node_n = 10;
 out_node_n = length(Y(:,1));
 
 %learning rate
 lr = 0.2;
-alpha_m = 0.9;
+alpha_m = 0.2;
 
 %weight matrix
 U1 = randn(hd_node_n,in_node_n);
 U2 = randn(hd2_node_n,hd_node_n+1);
-U3 = randn(out_node_n,hd2_node_n+1);
-%momentum
-v1 = 0;v2 = 0;v3 = 0;
+U3 = randn(hd3_node_n,hd2_node_n+1);
+U4 = randn(out_node_n,hd3_node_n+1);
 
-epo = 2000;
+%momentum
+v1 = 0;v2 = 0;v3 = 0;v4 = 0;
+
+epo =30000;
 tic
-sample_n = 100;
-for j=1:epo
-    index = 1:length(X);
-    o = zeros(size(Y));
-    
+sample_n = 64;
+for j=1:epo    
     sample_index = randperm(length(X));
     X_sample = X(:,sample_index(1:sample_n));
     Y_sample = Y(:,sample_index(1:sample_n));
@@ -45,6 +45,7 @@ for j=1:epo
     dU1 = zeros(size(U1));
     dU2 = zeros(size(U2));
     dU3 = zeros(size(U3));
+    dU4 = zeros(size(U4));
     
     for i=1:sample_n
         %% forward
@@ -52,30 +53,37 @@ for j=1:epo
         hidden_node = (hidden_node-mean(hidden_node))./std(hidden_node);
         hidden2_node = [1; Forward_mlp(@Relu,hidden_node,U2)];
         hidden2_node = (hidden2_node-mean(hidden2_node))./std(hidden2_node);
-        o = Forward_mlp(@exp,hidden2_node,U3)/sum(Forward_mlp(@exp,hidden2_node,U3));
+        hidden3_node = [1; Forward_mlp(@Relu,hidden2_node,U3)];
+        hidden3_node = (hidden3_node-mean(hidden3_node))./std(hidden3_node);
+        o = Forward_mlp(@exp,hidden3_node,U4)/sum(Forward_mlp(@exp,hidden3_node,U4));
         %% Error
         o_num(i) = find(o==max(o));
         y_num(i) = find(Y_sample(:,i)==1);
         error(i,:) = -sum(Y_sample(:,i).*log(o));
         
         %% Momentum
+        hU4 = U4 + alpha_m*v4;
         hU3 = U3 + alpha_m*v3;
         hU2 = U2 + alpha_m*v2;
         hU1 = U1 + alpha_m*v1;
         
         %% error backpropagation
         gradient1 = (Y_sample(:,i) - o);
-        dU3 = dU3 -gradient1*hidden2_node';
-        gradient2 = (gradient1'*hU3(:,2:end))'.*Forward_mlp(@ReluGradient,hidden_node,hU2);
-        dU2 = dU2 -gradient2*hidden_node';
-        gradient3 = (gradient2'*hU2(:,2:end))'.*Forward_mlp(@ReluGradient,X_sample(:,i),hU1);
-        dU1 = dU1 -gradient3*X_sample(:,i)';
+        dU4 = dU4 -gradient1*hidden3_node';
+        gradient2 = (gradient1'*hU4(:,2:end))'.*Forward_mlp(@ReluGradient,hidden2_node,hU3);
+        dU3 = dU3 -gradient2*hidden2_node';
+        gradient3 = (gradient2'*hU3(:,2:end))'.*Forward_mlp(@ReluGradient,hidden_node,hU2);
+        dU2 = dU2 -gradient3*hidden_node';
+        gradient4 = (gradient3'*hU2(:,2:end))'.*Forward_mlp(@ReluGradient,X_sample(:,i),hU1);
+        dU1 = dU1 -gradient4*X_sample(:,i)';
     end
+    v4 = alpha_m*v4 - lr*dU4/sample_n;
     v3 = alpha_m*v3 - lr*dU3/sample_n;
     v2 = alpha_m*v2 - lr*dU2/sample_n;
     v1 = alpha_m*v1 - lr*dU1/sample_n;
     
     %update weight
+    U4 = U4 + v4;
     U3 = U3 + v3;
     U2 = U2 + v2;
     U1 = U1 + v1;
@@ -114,8 +122,9 @@ for i=1:length(X)
     %forward
     hidden_node = [1; Forward_mlp(@Relu,X(:,i),U1)];
     hidden2_node = [1; Forward_mlp(@Relu,hidden_node,U2)];
-    o(:,i) =Forward_mlp(@exp,hidden2_node,U3)/sum(Forward_mlp(@exp,hidden2_node,U3));
-     results(i) =  min( Y(:,i) == (o(:,i) ==max(o(:,i))));
+    hidden3_node = [1; Forward_mlp(@Relu,hidden2_node,U3)];
+    o(:,i) =Forward_mlp(@exp,hidden3_node,U4)/sum(Forward_mlp(@exp,hidden3_node,U4));
+     results(i) = min( Y(:,i) == (o(:,i) == max(o(:,i))));
 end
 
 [~,max_o] = max(o);
@@ -127,7 +136,7 @@ for i=1:length(X)
     end
 end
 
-fprintf("\n정확도 : %5.4f\n세대 : %6.0f\n",error_epo,epo)
+fprintf("\n정확도 : %5.4f\n",error_epo)
 fprintf("test 집합에서 틀린 개수 : %d\n",fail);
 
 %% function
