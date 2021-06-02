@@ -23,7 +23,8 @@ out_node_n = length(Y(:,1));
 
 %learning rate
 lr = 0.2;
-alpha_m = 0.2;
+alpha_m = 0.2; 
+ep = 2;
 
 %weight matrix
 U1 = randn(hd_node_n,in_node_n);
@@ -83,10 +84,10 @@ for j=1:epo
     v1 = alpha_m*v1 - lr*dU1/sample_n;
     
     %update weight
-    U4 = U4 + v4;
-    U3 = U3 + v3;
-    U2 = U2 + v2;
-    U1 = U1 + v1;
+    U4 = U4 + v4 - lr*ep*sign(U4);
+    U3 = U3 + v3 - lr*ep*sign(U3);
+    U2 = U2 + v2 - lr*ep*sign(U2);
+    U1 = U1 + v1 - lr*ep*sign(U1);
     
     clc
     tex2 = mean(o_num == y_num);
