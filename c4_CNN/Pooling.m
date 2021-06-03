@@ -19,4 +19,4 @@ for j = 1 :stride: col - num+1
     end
     i_out = 0;
 end
-endneg
+end
