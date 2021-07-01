@@ -17,14 +17,14 @@ X = (X-mean(X))./std(X);
 %number of nodes
 in_node_n = length(X(:,1));
 hd_node_n = 15;
-hd2_node_n = 20;
+hd2_node_n = 10;
 hd3_node_n = 10;
 out_node_n = length(Y(:,1));
 
 %learning rate
-lr = 0.2;
-alpha_m = 0; 
-alpha_lr = 0;
+lr = 0.02;
+alpha_m = 1; 
+alpha_lr = 0.9999;
 ep = 2;
 
 %weight matrix
@@ -38,9 +38,9 @@ v1 = 0;v2 = 0;v3 = 0;v4 = 0;
 r1 = 0;r2 = 0;r3 = 0;r4 = 0;
 
 t = 1;
-epo =30000;
 tic
-sample_n = 64;
+epo = 5000;
+sample_n = 60;
 for j=1:epo    
     sample_index = randperm(length(X));
     X_sample = X(:,sample_index(1:sample_n));
@@ -54,15 +54,15 @@ for j=1:epo
     for i=1:sample_n
         %% forward
         hidden_node = [1; Forward_mlp(@Relu,X_sample(:,i),U1)];
-        hidden_node = (hidden_node-mean(hidden_node))./std(hidden_node);
+%         hidden_node = (hidden_node-mean(hidden_node))./std(hidden_node);
         hidden2_node = [1; Forward_mlp(@Relu,hidden_node,U2)];
-        hidden2_node = (hidden2_node-mean(hidden2_node))./std(hidden2_node);
+%         hidden2_node = (hidden2_node-mean(hidden2_node))./std(hidden2_node);
         hidden3_node = [1; Forward_mlp(@Relu,hidden2_node,U3)];
-        hidden3_node = (hidden3_node-mean(hidden3_node))./std(hidden3_node);
+%         hidden3_node = (hidden3_node-mean(hidden3_node))./std(hidden3_node);
         o = Forward_mlp(@exp,hidden3_node,U4)/sum(Forward_mlp(@exp,hidden3_node,U4));
         %% Error
-        o_num(i) = find(o==max(o));
-        y_num(i) = find(Y_sample(:,i)==1);
+%         o_num(i) = find(o==max(o));
+%         y_num(i) = find(Y_sample(:,i)==1);
         error(i,:) = -sum(Y_sample(:,i).*log(o));
         
         %% Momentum
@@ -104,12 +104,12 @@ for j=1:epo
     U1 = U1 - (lr./((1e-10)+sqrt(r1))).*v1 - lr*ep*sign(U1);
     
     clc
-    tex2 = mean(o_num == y_num);
+%     tex2 = mean(o_num == y_num);
     tex1 = mean(error);
     mse(j,1) = tex1;
     fprintf("학습 횟수 : %d번\n",j)
     fprintf("학습된 글자 수 : %d 개 (한 번 반복에 64개씩 학습을 진행합니다.)\n",j*sample_n)
-    fprintf("학습 데이터 손글씨 인식률 : %0.2f%%\n",round(tex2*100,4))
+%     fprintf("학습 데이터 손글씨 인식률 : %0.2f%%\n",round(tex2*100,4))
     fprintf("전체 학습 오차(MSE) : %0.5f\n",round(tex1,4))
     cla
     
@@ -118,7 +118,6 @@ for j=1:epo
     title("MSE")
     drawnow;
 end
-
 
 toc
 
