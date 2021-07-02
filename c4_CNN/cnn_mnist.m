@@ -1,6 +1,6 @@
 clc,clear,close all
 % CNN / MNIST
-% Revision date: 2021.07.01
+% Revision date: 2021.07.02
 % mnist\trainingData.mat
 % mnist\trainingData.mat
 % images : 28 x 28 x 60000 
@@ -19,7 +19,7 @@ y = one_hot(labels+1,:)';
 % 커널 크기
 U1_ab = [3 3 1 1];
 U2_cd = [4 4 1 1];
-U3_rq = [size(y,1) 25];
+U3_rq = [size(y,1) 5000];
 
 %풀링 사이즈
 p1 = 2;
@@ -31,10 +31,10 @@ x(isnan(Normalization3(x))) = 0;
 lr = 0.1;
 
 %세대 수 (epoch)
-epo = 5000;
+epo = 10000;
 
 %배치 수 
-batch = 100;
+batch = 500;
 
 
 
@@ -42,7 +42,7 @@ batch = 100;
 U1 = randn(U1_ab(1),U1_ab(2),U1_ab(3),U1_ab(4)); % a*b
 U2 = randn(U2_cd(1),U2_cd(2),U2_cd(3),U2_cd(4)); % c*d
 U3 = randn(U3_rq(1),U3_rq(2));  % r*q
-
+tic
 %%
 for z = 1:epo
     % data shuffle
@@ -55,7 +55,7 @@ for z = 1:epo
     dU3 = zeros(size(U3));% r*q
     
     for i = 1 : batch
-        %Forward(in,kernel,stride,padding)
+        %Correlation(in,kernel,stride,padding)
         %Pooling(in,num,stride)
         X(:,:,1,i) = Normalization3(X(:,:,1,i));
         z1 = Correlation(X(:,:,1,i),U1);
@@ -69,16 +69,15 @@ for z = 1:epo
         pol_layer2 = Pooling(layer2,p2,p2); % o'*p'
        
         flat_layer3 = reshape(pol_layer2,[],1); % q*1
-        out_layer = FC(flat_layer3,U3); % r*1
+        out_layer = U3*flat_layer3; % r*1
         out_layer = (out_layer-mean(out_layer))./std(out_layer);
-        out = Softmax(out_layer);
+        out = exp(out_layer)/sum(exp(out_layer));
         error(i,:) = -sum(Y(:,i).*log(out));
-        %% back prop
-        gradient3 = Y(:,i) - out;
-        %출력층 gradient3
-        %FC층 U3
-        gradient2 = Gradient(layer2,z2,gradient3,U3,p2);% o*p
-        gradient1 = Gradient(layer1,z1,gradient2,U2,p1);% m*n
+        
+       %% back prop
+        gradient3 = Y(:,i) - out; %out error gradient
+        gradient2 = Gradient(layer2,z2,gradient3,U3,p2);% o*p / CONV - FOOL - FC
+        gradient1 = Gradient(layer1,z1,gradient2,U2,p1);% m*n / CONV - FOOL - CONV
         
         dU3 = dU3 - gradient3*flat_layer3';
         dU2 = dU2 - Correlation(pol_layer1,gradient2);
@@ -91,7 +90,7 @@ for z = 1:epo
    tex1 = mean(error);
    fprintf("전체 학습 오차: %0.5f\n",round(tex1,4))
 end
-
+toc
 load mnist\testingData.mat;
 X = reshape(images, [28,28,1,10000]);
 one_hot = diag(ones(1,max(labels)+1));
@@ -111,10 +110,10 @@ for i=1:length(X)
         pol_layer2 = Pooling(layer2,p2,p2); % o'*p'
        
         flat_layer3 = reshape(pol_layer2,[],1); % q*1
-        out_layer = FC(flat_layer3,U3); % r*1
+        out_layer = U3*flat_layer3; % r*1
         out_layer = (out_layer-mean(out_layer))./std(out_layer);
-        out = Softmax(out_layer);
-        results(i) = min( Y(:,i) == (out(:,i) == max(out)));
+        out = exp(out_layer)/sum(exp(out_layer));
+        results(i) = min( Y(:,i) == (out == max(out)));
 end
 error_epo = round(mean(results)*100,2);
 fprintf("\n정확도 : %5.4f\n",error_epo)
