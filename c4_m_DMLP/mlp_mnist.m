@@ -7,11 +7,18 @@ clc,clear,close all
 % sk.boo
 
 % training set (MNIST)
-load mnist\trainingData.mat;
-X = reshape(images,28^2,[]);% input : 28^2 x 60000
-one_hot = diag(ones(1,max(labels)+1));
-Y = one_hot(labels+1,:)';% output : 10 x 60000
-X = [ones(1,length(X)) ; X]; % bias add
+% load mnist\trainingData.mat;
+% X = reshape(images,28^2,[]);% input : 28^2 x 60000
+% one_hot = diag(ones(1,max(labels)+1));
+% Y = one_hot(labels+1,:)';% output : 10 x 60000
+% X = [ones(1,length(X)) ; X]; % bias add
+% X = (X-mean(X))./std(X);
+
+load iris.dat
+X = iris([1:40, 51:90, 101:140],1:4)';
+Y = iris([1:40, 51:90, 101:140],5)';
+one_hot = diag(ones(1,max(Y)));
+Y = one_hot(Y,:)';% output : 10 x 60000
 X = (X-mean(X))./std(X);
 
 %number of nodes
@@ -22,10 +29,10 @@ hd3_node_n = 10;
 out_node_n = length(Y(:,1));
 
 %learning rate
-lr = 0.02;
-alpha_m = 1; 
-alpha_lr = 0.9999;
-ep = 2;
+lr = 0.2;
+alpha_m = 0;
+alpha_lr = 0.9;
+ep = 1;
 
 %weight matrix
 U1 = randn(hd_node_n,in_node_n);
@@ -37,11 +44,11 @@ U4 = randn(out_node_n,hd3_node_n+1);
 v1 = 0;v2 = 0;v3 = 0;v4 = 0;
 r1 = 0;r2 = 0;r3 = 0;r4 = 0;
 
-t = 1;
+
 tic
 epo = 5000;
-sample_n = 60;
-for j=1:epo    
+sample_n = 100;
+for j=1:epo
     sample_index = randperm(length(X));
     X_sample = X(:,sample_index(1:sample_n));
     Y_sample = Y(:,sample_index(1:sample_n));
@@ -54,15 +61,15 @@ for j=1:epo
     for i=1:sample_n
         %% forward
         hidden_node = [1; Forward_mlp(@Relu,X_sample(:,i),U1)];
-%         hidden_node = (hidden_node-mean(hidden_node))./std(hidden_node);
+        hidden_node = (hidden_node-mean(hidden_node))./std(hidden_node);
         hidden2_node = [1; Forward_mlp(@Relu,hidden_node,U2)];
-%         hidden2_node = (hidden2_node-mean(hidden2_node))./std(hidden2_node);
+        hidden2_node = (hidden2_node-mean(hidden2_node))./std(hidden2_node);
         hidden3_node = [1; Forward_mlp(@Relu,hidden2_node,U3)];
-%         hidden3_node = (hidden3_node-mean(hidden3_node))./std(hidden3_node);
+        hidden3_node = (hidden3_node-mean(hidden3_node))./std(hidden3_node);
         o = Forward_mlp(@exp,hidden3_node,U4)/sum(Forward_mlp(@exp,hidden3_node,U4));
         %% Error
-%         o_num(i) = find(o==max(o));
-%         y_num(i) = find(Y_sample(:,i)==1);
+        o_num(i) = find(o==max(o));
+        y_num(i) = find(Y_sample(:,i)==1);
         error(i,:) = -sum(Y_sample(:,i).*log(o));
         
         %% Momentum
@@ -104,52 +111,59 @@ for j=1:epo
     U1 = U1 - (lr./((1e-10)+sqrt(r1))).*v1 - lr*ep*sign(U1);
     
     clc
-%     tex2 = mean(o_num == y_num);
+    tex2 = mean(o_num == y_num);
     tex1 = mean(error);
     mse(j,1) = tex1;
     fprintf("학습 횟수 : %d번\n",j)
     fprintf("학습된 글자 수 : %d 개 (한 번 반복에 64개씩 학습을 진행합니다.)\n",j*sample_n)
-%     fprintf("학습 데이터 손글씨 인식률 : %0.2f%%\n",round(tex2*100,4))
+    fprintf("학습 데이터 손글씨 인식률 : %0.2f%%\n",round(tex2*100,4))
     fprintf("전체 학습 오차(MSE) : %0.5f\n",round(tex1,4))
-    cla
-    
-    plot(mse);
-    axis([0 inf 0 5])
-    title("MSE")
-    drawnow;
+    %     cla
+    %
+    %     plot(mse);
+    %     axis([0 inf 0 5])
+    %     title("MSE")
+    %     drawnow;
 end
 
 toc
 
 
 %% test
-load mnist\testingData.mat;
-X = reshape(images,28^2,[]);% input : 28^2 x 10000
-one_hot = diag(ones(1,max(labels)+1));
-Y = one_hot(labels+1,:)';% output : 10 x 10000
-X = [ones(1,length(X)) ; X]; % bias add
+% load mnist\testingData.mat;
+% X = reshape(images,28^2,[]);% input : 28^2 x 10000
+% one_hot = diag(ones(1,max(labels)+1));
+% Y = one_hot(labels+1,:)';% output : 10 x 10000
+% X = [ones(1,length(X)) ; X]; % bias add
+% X = (X-mean(X))./std(X);
+
+X = iris([41:50, 91:100, 141:150],1:4)';
+labels = iris([41:50, 91:100, 141:150],5)';
+one_hot = diag(ones(1,max(labels)));
+Y = one_hot(labels,:)';% output : 10 x 60000
 X = (X-mean(X))./std(X);
 
 o = zeros(size(Y));
-
+fail = 0;
 for i=1:length(X)
     %forward
     hidden_node = [1; Forward_mlp(@Relu,X(:,i),U1)];
     hidden2_node = [1; Forward_mlp(@Relu,hidden_node,U2)];
     hidden3_node = [1; Forward_mlp(@Relu,hidden2_node,U3)];
     o(:,i) =Forward_mlp(@exp,hidden3_node,U4)/sum(Forward_mlp(@exp,hidden3_node,U4));
-     results(i) = min( Y(:,i) == (o(:,i) == max(o(:,i))));
-end
-
-[~,max_o] = max(o);
-error_epo = round(mean(results)*100,2);
-fail = 0;
-for i=1:length(X)
+    results(i) = min( Y(:,i) == (o(:,i) == max(o(:,i))));
+    [~,max_o] = max(o(:,i));
     if max_o(i) ~= labels(i)
         fail = fail + 1;
     end
+
 end
 
+error_epo = round(mean(results)*100,2);
+
+plot(mse);
+axis([0 inf 0 5])
+title("MSE")
 fprintf("\n정확도 : %5.4f\n",error_epo)
 fprintf("test 집합에서 틀린 개수 : %d\n",fail);
 
@@ -158,6 +172,4 @@ fprintf("test 집합에서 틀린 개수 : %d\n",fail);
 function z = Forward_mlp(act,x,U)
 z = act(U*x);
 end
-
-
 
