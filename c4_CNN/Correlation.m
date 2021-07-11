@@ -1,8 +1,8 @@
-function out = Correlation(in,kernel,stride,padding)
+function out = Correlation(in,kernel,bi,padding)
 arguments
     in (:,:,:,:) double
     kernel (:,:,:,:) double
-    stride (1,1) double = 1
+    bi (:,:) double
     padding (1,1) double = 0 %zero padding
 end
 
@@ -13,23 +13,25 @@ if padding ~= 0
     in = pad;
 end
 
-[col,row,~,in_n] = size(in);
-[k_col,k_row,~,k_n] = size(kernel);
-j = length(1 :stride: col - k_col+1);
-i = length(1 :stride: row - k_row+1);
-out = zeros(j,i,1,in_n*k_n);
-j_out = 0;i_out = 0;
+[p_col,p_row,~,in_n] = size(in);
+[k_col,k_row,k_ch,k_n] = size(kernel);
+j = p_col-k_col+1;
+i = p_row-k_row+1;
+out = zeros(j,i,k_n,in_n);
 
-for j = 1 :stride: col - k_col+1
-    j_out = j_out+1;
-    for i = 1 :stride: row - k_row+1
-        i_out = i_out+1;
-        for n = 1:in_n
-            out(j_out,i_out,1,k_n*(n-1)+1:n*k_n) = ...
-                sum(in(j:k_col-1+j,i:k_row-1+i,:,n).*kernel,[1,2,3]);
+for n = 1:in_n %전체 이미지 개수
+    for k = 1:k_n %전체 커널 개수
+        out1 = zeros(j,i);
+        for d = 1:k_ch %전체 커널 개수
+            kern = squeeze(kernel(:,:,d,k));
+            kern = rot90(squeeze(kern),2);
+            im = squeeze(in(:,:,d,n));
+            out1 = out1 + conv2(im,kern,'valid');
+            
+%             out1 = out1 + filter2(kernel(:,:,d,k),in(:,:,d,n),'valid');
         end
+        out(:,:,k,n) = out1+bi(k);
     end
-    i_out = 0;
 end
 
 
