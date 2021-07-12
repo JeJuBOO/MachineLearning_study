@@ -31,12 +31,12 @@ clc
 % input("\n\n 배포해드린 숫자 데이터를 로드할게요. [엔터키를 눌러주세요] ")
 
 %% 학습 데이터를 한번 봅시다
-% mnist = images(:,1:200);
-% mnist = reshape(mnist,28,28,200);
-% montage(mnist)
+mnist = images(:,1:200);
+mnist = reshape(mnist,28,28,200);
+montage(mnist)
 % 
 % title("학습에 활용할 손글씨 이미지 입니다. [엔터키를 눌러주세요] ")
-% % clc
+clc
 % input("\n\n 학습에 활용할 손글씨 이미지 입니다. [엔터키를 눌러주세요] ")
 
 x = images;
