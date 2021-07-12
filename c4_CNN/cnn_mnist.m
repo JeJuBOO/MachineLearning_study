@@ -2,27 +2,27 @@ clc,clear,close all
 % CNN / MNIST
 % Revision date: 2021.07.02
 % mnist\trainingData.mat
-% mnist\trainingData.mat
 % images : 28 x 28 x 60000
 % labels : 1 x 60000
+% mnist\testingData.mat
+% images : 28 x 28 x 6000
+% labels : 1 x 6000
 % sk.boo
 
 %% set up
 % training set (MNIST)
 load mnist\trainingData.mat;
-
-images = images(:,:,1:6000);
-labels = labels(1:6000);
-
+% 학습데이터 간소화
+% images = images(:,:,1:6000);
+% labels = labels(1:6000);
 x = reshape(images, 28,28,1,[]);
 one_hot = diag(ones(1,max(labels)+1));
 y = one_hot(labels+1,:)';
-% x(input images) : 28*28*1 60000
-% y(label) : 10*60000
-load mnist\testingData.mat;
 
+load mnist\testingData.mat;
 imageDim = size(x,1);
 labelClasses = size(y,1);
+
 % 커널 크기
 kernelSize1 = [3 3 1 10];
 kernelSize2 = [4 4 10 10];
@@ -42,7 +42,7 @@ kernelSize3 = [labelClasses layerDim3];
 lr = 0.01;
 
 %세대 수 (epoch)
-epo = 3;
+epo = 5;
 
 %배치 수
 batch = 150;
@@ -78,7 +78,7 @@ for e = 1:epo
         dB3 = zeros(size(B3));
         
         % 입력데이터 정규화
-        X = Normalization3(X);
+        X =  Relu(Normalization3(X));
         
         z1 = Correlation(X,U1,B1);
         z1 = Normalization3(z1);
@@ -98,7 +98,7 @@ for e = 1:epo
         out = exp(out_layer)./sum(exp(out_layer));
         error(idx,:) = sum(-sum(Y.*log(out)))/batch;
         
-        %% back prop
+        %% Backpropagation
         gradient3 = Y - out; %out error gradient
         
         % o*p / CONV - FOOL - FC
@@ -122,7 +122,7 @@ for e = 1:epo
         B1 = B1 - lr*dB1/batch;
         
         tex1 = mean(error);
-        fprintf("전체 학습 오차: %0.4f\n",round(tex1,4))
+        fprintf("epoch 진행도 : %2.4f %% 전체 학습 오차: %0.4f\n",i/length(x)*100,round(tex1,4))
     end
     lr = lr/2;
     time = toc;
@@ -146,9 +146,7 @@ for e = 1:epo
     out_layer = (out_layer-mean(out_layer))./std(out_layer);
     
     % softmax error
-    
     out = exp(out_layer)./sum(exp(out_layer));
-%     out = sum(out, 2)/length(testlabel);
     [~,preds] = max(out,[],1);
     
     acc = sum(preds==labels)/length(preds);
@@ -157,33 +155,6 @@ for e = 1:epo
     plot(error);
   
 end
-toc
-load mnist\testingData.mat;
-X = reshape(images, [28,28,1,10000]);
-one_hot = diag(ones(1,max(labels)+1));
-Y = one_hot(labels+1,:)';
-
-for i=1:length(X)
-    %forward
-    X(:,:,1,i) = Normalization3(X(:,:,1,i));
-    z1 = Correlation(X(:,:,1,i),U1,B1);
-    z1 = Normalization3(z1);
-    layer1 = Relu(z1);% m*n
-    pool_layer1 = Pooling(layer1,poolDim1,poolDim1); % m'*n'
-    
-    z2 = Correlation(pool_layer1,U2,B2);
-    z2 = Normalization3(z2);
-    layer2 = Relu(z2);% o*p
-    pool_layer2 = Pooling(layer2,poolDim2,poolDim2); % o'*p'
-    
-    flat_layer3 = reshape(pool_layer2,[],1); % q*1
-    out_layer = U3*flat_layer3; % r*1
-    out_layer = (out_layer-mean(out_layer))./std(out_layer);
-    out = exp(out_layer)/sum(exp(out_layer));
-    results(i) = min( Y(:,i) == (out == max(out)));
-end
-error_epo = round(mean(results)*100,2);
-fprintf("\n정확도 : %5.4f\n",error_epo)
 
 
 

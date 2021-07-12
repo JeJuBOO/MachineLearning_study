@@ -22,13 +22,11 @@ out = zeros(j,i,k_n,in_n);
 for n = 1:in_n %전체 이미지 개수
     for k = 1:k_n %전체 커널 개수
         out1 = zeros(j,i);
-        for d = 1:k_ch %전체 커널 개수
+        for d = 1:k_ch %커널 채널 개수
             kern = squeeze(kernel(:,:,d,k));
             kern = rot90(squeeze(kern),2);
             im = squeeze(in(:,:,d,n));
             out1 = out1 + conv2(im,kern,'valid');
-            
-%             out1 = out1 + filter2(kernel(:,:,d,k),in(:,:,d,n),'valid');
         end
         out(:,:,k,n) = out1+bi(k);
     end
