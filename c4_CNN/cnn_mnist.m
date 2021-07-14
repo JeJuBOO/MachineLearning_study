@@ -42,7 +42,7 @@ kernelSize3 = [labelClasses layerDim3];
 lr = 0.01;
 % 가중치 감쇠
 lambda = 0.0001;
-
+% RMSProp
 alpha_r = 0.9;
 
 %세대 수 (epoch)
@@ -89,8 +89,8 @@ for e = 1:epo
         dB3 = zeros(size(B3));
         
         % 입력데이터 정규화
-        X =  Relu(Normalization3(X));
-        
+%         X =  Relu(Normalization3(X));
+        X = X/255;
         z1 = Correlation(X,U1,B1);
         z1 = Normalization3(z1);
         layer1 = Relu(z1);% m*n
@@ -111,7 +111,7 @@ for e = 1:epo
         error(idx*e,:) = sum(-sum(Y.*log(out)))/batch + wCost;
 
         %% Backpropagation
-        gradient3 = Y - out; %out error gradient
+        gradient3 = out - Y; %out error gradient
         
         % o*p / CONV - FOOL - FC
         gradient_FC2 = reshape(U3' * gradient3,layerDim2,layerDim2,kernelSize2(4),X_num);
@@ -134,7 +134,7 @@ for e = 1:epo
         r2 =  alpha_r*r2 +(1-alpha_r)*(dU2/batch+lambda*U2).^2;
         rb2 =  alpha_r*rb2 +(1-alpha_r)*(dB2/batch).^2;
         r1 =  alpha_r*r1 +(1-alpha_r)*(dU1/batch+lambda*U1).^2;
-        rb1 =  alpha_r*rb1 +(1-alpha_r)*(dB1/batch).^2;
+        rb1 =  alpha_r*rb1 + (1- alpha_r)*(dB1/batch).^2;
               
         U3 = U3 - (lr./(1e-4+sqrt(r3))).*(dU3/batch+lambda*U3);
         B3 = B3 - (lr./(1e-4+sqrt(rb3))).*dB3/batch;
@@ -144,9 +144,9 @@ for e = 1:epo
         B1 = B1 - (lr./(1e-4+sqrt(rb1))).*dB1/batch;
         
         tex1 = mean(error);
-        fprintf("%2.0f epoch 진행도 : %2.4f %% 전체 학습 오차: %0.4f\n",e,i/length(x)*100,round(tex1,4))
+        fprintf("%2.0f epoch / 진행도 : %2.4f %% 전체 학습 오차: %0.4f\n",e,i/length(x)*100,round(tex1,4))
     end
-%     lr = lr/2;
+    lr = lr/2;
     time = toc;
 
     testim = reshape(images, [28,28,1,10000]);
@@ -171,10 +171,11 @@ for e = 1:epo
     out = exp(out_layer)./sum(exp(out_layer));
     [~,preds] = max(out,[],1);
     
-    acc = sum(preds==labels)/length(preds);
-    fprintf('Accuracy is %f\n',acc);
+    acc = sum((preds-1)==labels)/length(preds);
+    fprintf('%2.0f epoch / Accuracy is %4.2f %%\n',e,acc*100);
     time
-    plot(error);
+    plot(error,'y');hold on
+    plot(smoothdata(error),'r','LineWidth',1)
   
 end
 
