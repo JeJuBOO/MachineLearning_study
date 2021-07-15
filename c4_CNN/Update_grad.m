@@ -11,11 +11,11 @@ end
 
 for n = 1:u_n 
     for ch = 1:u_ch 
-        for d = 1:l_n 
-            dU(:,:,ch,n) = dU(:,:,ch,n) + conv2(layer(:,:,ch,d),rot90(grad(:,:,n,d),2),'valid');
+        for mini = 1:l_n 
+            dU(:,:,ch,n) = dU(:,:,ch,n) + conv2(layer(:,:,ch,mini),rot90(grad(:,:,n,mini),2),'valid');
         end
-        dB(n) = sum(grad(:,:,n,:),'all');
     end
+    dB(n) = sum(grad(:,:,n,:),'all');
 end
 
 
