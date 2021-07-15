@@ -43,7 +43,7 @@ lr = 0.1;
 %weight decay
 lambda = 0.0001;
 alpha_m = 0.5;
-alpha_r = 0.9;
+alpha_r = 0.99;
 
 %세대 수 (epoch)
 epo = 5;
@@ -52,33 +52,34 @@ epo = 5;
 batch = 150;
 
 % 커널
-U1 = 1e-1*randn(kernelSize1(1),kernelSize1(2),kernelSize1(3),kernelSize1(4)); % a*b
-U2 = 1e-1*randn(kernelSize2(1),kernelSize2(2),kernelSize2(3),kernelSize2(4)); % c*d
-U3 = 1e-1*randn(kernelSize3(1),kernelSize3(2));  % r*q
+U1 = (1e-1)*randn(kernelSize1(1),kernelSize1(2),kernelSize1(3),kernelSize1(4)); % a*b
+U2 = (1e-1)*randn(kernelSize2(1),kernelSize2(2),kernelSize2(3),kernelSize2(4)); % c*d
+U3 = (1e-1)*randn(kernelSize3(1),kernelSize3(2));  % r*q
 B1 = zeros(kernelSize1(4), 1);
 B2 = zeros(kernelSize2(4), 1);
 B3 = zeros(labelClasses, 1);
-%momentum
+% momentum
 v1 = zeros(size(U1));% a*b
 v2 = zeros(size(U2));% c*d
 v3 = zeros(size(U3));% r*q
 vb1 = zeros(size(B1));
 vb2 = zeros(size(B2));
 vb3 = zeros(size(B3));
+% adaptive learnig rate
 r1 = zeros(size(U1));% a*b
 r2 = zeros(size(U2));% c*d
 r3 = zeros(size(U3));% r*q
 rb1 = zeros(size(B1));
 rb2 = zeros(size(B2));
 rb3 = zeros(size(B3));
-    idx=0;
-tic
+
+idx=0;
+tic;
 %%
 for e = 1:epo
     % data shuffle
     p = randperm(length(x));
     
-
     for i = 1:batch:(length(x)-batch+1)
         %Correlation(in,kernel,stride,padding)
         %Pooling(in,num,stride)
@@ -87,9 +88,9 @@ for e = 1:epo
         X_num = size(X,4);
         idx=idx+1;
         
-        % momentum enable
-        if i == 20*150+1
-            alpha_m = 0.95;
+        % momentum
+        if i == 20*batch+1
+            alpha_m = 0.9;
         end
         
         dU1 = zeros(size(U1));% a*b
@@ -120,7 +121,7 @@ for e = 1:epo
         % softmax error
         out = exp(out_layer)./sum(exp(out_layer));
         wCost = lambda/2 * (sum(U3(:).^2)+sum(U2(:).^2)+sum(U1(:).^2));
-        error(idx,:) = sum(-sum(Y.*log(out)))/batch + wCost;
+        error(idx,:) = -sum(sum(Y.*log(out)))/batch + wCost;
         %% Backpropagation
         gradient3 = out - Y; %out error gradient
 
@@ -137,25 +138,35 @@ for e = 1:epo
         [dU2,dB2] = Update_grad(dU2,dB2,pool_layer1,gradient2);
         [dU1,dB1] = Update_grad(dU1,dB1,X,gradient1);
                 
-        v3 = alpha_m*v3 + lr*(dU3/batch + lambda*U3);
-        vb3 = alpha_m*vb3 + lr*dB3/batch;
-        v2 = alpha_m*v2 + lr*(dU2/batch + lambda*U2);
-        vb2 = alpha_m*vb2 + lr*dB2/batch;
-        v1 = alpha_m*v1 + lr*(dU1/batch + lambda*U1);
-        vb1 = alpha_m*vb1 + lr*dB1/batch;
+        %% Momentum
+        v3 = alpha_m*v3 + (1-alpha_m)*dU3/batch;    hv3 = v3/(1-(alpha_m)^idx);
+        vb3 = alpha_m*vb3 + (1-alpha_m)*dB3/batch;  hvb3 = vb3/(1-(alpha_m)^idx);
+        v2 = alpha_m*v2 + (1-alpha_m)*dU2/batch;    hv2 = v2/(1-(alpha_m)^idx);
+        vb2 = alpha_m*vb2 + (1-alpha_m)*dB2/batch;  hvb2 = vb2/(1-(alpha_m)^idx);
+        v1 = alpha_m*v1 + (1-alpha_m)*dU1/batch;    hv1 = v1/(1-(alpha_m)^idx);
+        vb1 = alpha_m*vb1 + (1-alpha_m)*dB1/batch;  hvb1 = vb1/(1-(alpha_m)^idx);
+        
+        %% RMSProp
+        r3 =  alpha_r*r3 + (1-alpha_r)*(dU3/batch).^2;  hr3 = r3/(1-(alpha_r)^idx);
+        rb3 =  alpha_r*rb3 + (1-alpha_r)*(dB3/batch).^2;hrb3 = rb3/(1-(alpha_r)^idx);
+        r2 =  alpha_r*r2 + (1-alpha_r)*(dU2/batch).^2;  hr2 = r2/(1-(alpha_r)^idx);
+        rb2 =  alpha_r*rb2 + (1-alpha_r)*(dB2/batch).^2;hrb2 = rb2/(1-(alpha_r)^idx);
+        r1 =  alpha_r*r1 + (1-alpha_r)*(dU1/batch).^2;  hr1 = r1/(1-(alpha_r)^idx);
+        rb1 =  alpha_r*rb1 + (1-alpha_r)*(dB1/batch).^2;hrb1 = rb1/(1-(alpha_r)^idx);
               
-        U3 = U3 - v3;
-        B3 = B3 - vb2;
-        U2 = U2 - v2;
-        B2 = B2 - vb2;
-        U1 = U1 - v1;
-        B1 = B1 - vb1;
+        U3 = U3 - lr*(hv3./((1e-8) + sqrt(hr3)) + lambda*U3);
+        B3 = B3 - lr*hvb3./((1e-8) + sqrt(hrb3));
+        U2 = U2 - lr*(hv2./((1e-8) + sqrt(hr2)) + lambda*U2);
+        B2 = B2 - lr*hvb2./((1e-8) + sqrt(hrb2));
+        U1 = U1 - lr*(hv1./((1e-8) + sqrt(hr1)) + lambda*U1);
+        B1 = B1 - lr*hvb1./((1e-8) + sqrt(hrb1));
                
         tex1 = mean(error);
-        fprintf("%2.0f epoch 진행도 : %2.4f %% 전체 학습 오차: %0.4f\n",e,i/length(x)*100,error(idx))
+        fprintf("오차: %0.4f  %2.4f \n",error(idx),i/length(x)*100)
+%         fprintf("%2.0f epoch 진행도 : %2.4f %% 전체 학습 오차: %0.4f\n",e,i/length(x)*100,error(idx))
     end
     time = toc;
-    lr = lr/2.0;
+
     testim = reshape(images, [28,28,1,10000]);
     
     z1 = Correlation(testim,U1,B1);
