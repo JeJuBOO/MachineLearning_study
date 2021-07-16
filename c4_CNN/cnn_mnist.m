@@ -101,22 +101,22 @@ for e = 1:epo
         dB3 = zeros(size(B3));
         
         % 입력데이터 정규화
-%         X =  Relu(Normalization3(X));
+        %         X =  Relu(Normalization3(X));
         X = X/255;
         
         z1 = Correlation(X,U1,B1);
-%         z1 = Normalization3(z1);
+        %         z1 = Normalization3(z1);
         layer1 = Relu(z1);% m*n
         [pool_layer1,pool_grad1] = Pooling(layer1,poolDim1,'mean'); % m'*n'
         
         z2 = Correlation(pool_layer1,U2,B2);
-%         z2 = Normalization3(z2);
+        %         z2 = Normalization3(z2);
         layer2 = Relu(z2);% o*p
         [pool_layer2,pool_grad2] = Pooling(layer2,poolDim2,'mean'); % o'*p'
         
         flat_layer3 = reshape(pool_layer2,[],X_num); % q*1
         out_layer = U3*flat_layer3 + B3; % r*1
-%         out_layer = (out_layer-mean(out_layer))./std(out_layer);
+        %         out_layer = (out_layer-mean(out_layer))./std(out_layer);
         
         % softmax error
         out = exp(out_layer)./sum(exp(out_layer),1);
@@ -124,7 +124,7 @@ for e = 1:epo
         error(idx,:) = -sum(sum(Y.*log(out)))/batch + wCost;
         %% Backpropagation
         gradient3 = out - Y; %out error gradient
-
+        
         % o*p / CONV - FOOL - FC
         gradient_FC2 = reshape(U3' * gradient3,layerDim2,layerDim2,kernelSize2(4),X_num);
         gradient2 = UpSampling(gradient_FC2,poolDim2,'mean',pool_grad2).*ReluGradient(z2);
@@ -137,7 +137,7 @@ for e = 1:epo
         dB3 = sum(gradient3,2);
         [dU2,dB2] = Update_grad(dU2,dB2,pool_layer1,gradient2);
         [dU1,dB1] = Update_grad(dU1,dB1,X,gradient1);
-                
+        
         %% Momentum
         v3 = alpha_m*v3 + (1-alpha_m)*dU3/batch;    hv3 = v3/(1-(alpha_m)^idx);
         vb3 = alpha_m*vb3 + (1-alpha_m)*dB3/batch;  hvb3 = vb3/(1-(alpha_m)^idx);
@@ -153,49 +153,49 @@ for e = 1:epo
         rb2 =  alpha_r*rb2 + (1-alpha_r)*(dB2/batch).^2;hrb2 = rb2/(1-(alpha_r)^idx);
         r1 =  alpha_r*r1 + (1-alpha_r)*(dU1/batch).^2;  hr1 = r1/(1-(alpha_r)^idx);
         rb1 =  alpha_r*rb1 + (1-alpha_r)*(dB1/batch).^2;hrb1 = rb1/(1-(alpha_r)^idx);
-              
+        
         U3 = U3 - lr*(hv3./((1e-8) + sqrt(hr3)) + lambda*U3);
         B3 = B3 - lr*hvb3./((1e-8) + sqrt(hrb3));
         U2 = U2 - lr*(hv2./((1e-8) + sqrt(hr2)) + lambda*U2);
         B2 = B2 - lr*hvb2./((1e-8) + sqrt(hrb2));
         U1 = U1 - lr*(hv1./((1e-8) + sqrt(hr1)) + lambda*U1);
         B1 = B1 - lr*hvb1./((1e-8) + sqrt(hrb1));
-               
+        
         tex1 = mean(error);
-%         fprintf("오차: %0.4f  %2.4f \n",error(idx),i/length(x)*100)
+        %         fprintf("오차: %0.4f  %2.4f \n",error(idx),i/length(x)*100)
         fprintf("%2.0f epoch 진행도 : %2.4f %% 전체 학습 오차: %0.4f\n",e,i/length(x)*100,error(idx))
     end
     time = toc;
-
+    
     testim = reshape(images, [28,28,1,10000]);
     testim = testim/255;
     
     z1 = Correlation(testim,U1,B1);
-%     z1 = Normalization3(z1);
+    %     z1 = Normalization3(z1);
     layer1 = Relu(z1);% m*n
     [pool_layer1,pool_grad1] = Pooling(layer1,poolDim1); % m'*n'
     
     z2 = Correlation(pool_layer1,U2,B2);
-%     z2 = Normalization3(z2);
+    %     z2 = Normalization3(z2);
     layer2 = Relu(z2);% o*p
     pool_layer2 = Pooling(layer2,poolDim2); % o'*p'
     
     flat_layer3 = reshape(pool_layer2,[],length(testim)); % q*1
     out_layer = U3*flat_layer3 + B3; % r*1
-%     out_layer = (out_layer-mean(out_layer))./std(out_layer);
+    %     out_layer = (out_layer-mean(out_layer))./std(out_layer);
     
     % softmax error
     out = exp(out_layer)./sum(exp(out_layer),1);
     [~,preds] = max(out,[],1);
     
     acc = sum((preds-1)==labels)/length(preds);
-      fprintf('%2.0f epoch / Accuracy is %4.2f %%\n',e,acc*100);
+    fprintf('%2.0f epoch / Accuracy is %4.2f %%\n',e,acc*100);
     time
     figure(1)
-     plot(e/length(error):e/length(error):e,error,'b');
-     xlabel("Epoch");ylabel("Cost")
-%     plot(smoothdata(error),'r','LineWidth',1)
-  
+    plot(e/length(error):e/length(error):e,error,'c');
+    xlabel("Epoch");ylabel("Cost");hold on;
+    plot(e/length(error):e/length(error):e,smoothdata(error),'b','LineWidth',1.5)
+    hold off;
 end
 
 
