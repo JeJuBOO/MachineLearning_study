@@ -10,28 +10,27 @@ labels = categorical(labels);
 layers = [
     imageInputLayer([28 28 1])
     
-    convolution2dLayer(3,8,'Padding',1)
+    convolution2dLayer(3,10)
     batchNormalizationLayer
     reluLayer
     
-    averagePooling2dLayer(2,'Stride',2)
+    averagePooling2dLayer(2,'Stride',1)
     
-    convolution2dLayer(3,16,'Padding',1)
+    convolution2dLayer(3,10)
     batchNormalizationLayer
     reluLayer
     
-    averagePooling2dLayer(2,'Stride',2)
-    
-    convolution2dLayer(3,32,'Padding',1)
-    batchNormalizationLayer
-    reluLayer
+    averagePooling2dLayer(2,'Stride',1)
     
     fullyConnectedLayer(10)
     softmaxLayer
     classificationLayer];
 
-options = trainingOptions('sgdm', ...
-    'MaxEpochs',4, ...
+options = trainingOptions('adam', ...
+    'GradientDecayFactor',0.9, ...
+    'SquaredGradientDecayFactor',0.99,...
+    'MaxEpochs',3, ...
+    'MiniBatchSize',150, ...
     'Verbose',false, ...
     'Plots','training-progress');
 
