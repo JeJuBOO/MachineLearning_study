@@ -13,10 +13,10 @@ tag :
 
 [oh_youtube]: https://www.youtube.com/playlist?list=PLSB4-69yY3od7cw1naXNgUsbdph6A3Aw7
 
-# Machine Learning 
+# [1] : Machine Learning 
 
 ### 목차
-0. [Machine Learning](#machine-learning)
+0. [Machine Learning](#1--machine-learning)
    * [목차](#목차)
 1. [Chapter 1 : Intoduction](#chapter-1--intoduction)
    * [Chapter 1.1 : 기계 학습과 특징](#chapter-11--기계-학습과-특징)
